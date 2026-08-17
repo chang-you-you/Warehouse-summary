@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>女装上货自动填数</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px 35px;
+            max-width: 900px;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            color: #1a1a2e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .row-group {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s;
+        }
+        .row-group:hover {
+            border-color: #ced4da;
+        }
+        .row-group select, .row-group input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            flex: 1;
+            min-width: 70px;
+            transition: border 0.2s;
+        }
+        .row-group select:focus, .row-group input:focus {
+            outline: none;
+            border-color: #4A90D9;
+            box-shadow: 0 0 0 3px rgba(74,144,217,0.15);
+        }
+        .row-group select { flex: 1; }
+        .row-group .small-input { flex: 0.5; min-width: 55px; }
+        .btn-remove {
+            background: #fee;
+            border: none;
+            color: #c0392b;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-remove:hover {
+            background: #fdd;
+            transform: scale(1.05);
+        }
+        .btn-add {
+            background: #e8f0fe;
+            border: 2px dashed #4A90D9;
+            color: #4A90D9;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+        .btn-add:hover {
+            background: #dce8f8;
+            border-color: #2c6fb0;
+        }
+        .file-section {
+            margin: 12px 0 16px;
+            padding: 18px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        .file-section label {
+            font-weight: 500;
+            font-size: 14px;
+            color: #333;
+            display: block;
+            margin-bottom: 6px;
+        }
+        .file-section input[type="file"] {
+            width: 100%;
+            padding: 10px 0;
+            font-size: 14px;
+        }
+        .btn-submit {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+        .btn-submit:hover {
+            background: #219a52;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(39,174,96,0.3);
+        }
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .tip {
+            font-size: 13px;
+            color: #999;
+            margin-top: 16px;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 16px;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 18px; }
+            .row-group { flex-direction: column; align-items: stretch; }
+            .row-group select, .row-group input { min-width: 0; }
+            .btn-remove { align-self: flex-end; }
+        }
+        .clear-memory {
+            background: none;
+            border: none;
+            color: #999;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 8px;
+        }
+        .clear-memory:hover {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📊 女装上货自动填数</h1>
+    <div class="subtitle">选择地点、月份、日期、风格、品类、数量，自动填入 Excel 对应位置</div>
+
+    <form id="mainForm" action="/upload" method="post" enctype="multipart/form-data">
+
+        <!-- 数据行容器 -->
+        <div id="rowsContainer">
+            <!-- 第一行默认显示 -->
+            <div class="row-group" data-index="0">
+                <select name="location[]" class="location-select">
+                    {% for loc in locations %}
+                    <option value="{{ loc }}">{{ loc }}</option>
+                    {% endfor %}
+                </select>
+                <select name="month[]" class="month-select">
+                    {% for m in months %}
+                    <option value="{{ m }}">{{ m }}月</option>
+                    {% endfor %}
+                </select>
+                <select name="day[]" class="day-select">
+                    {% for d in days %}
+                    <option value="{{ d }}">{{ d }}日</option>
+                    {% endfor %}
+                </select>
+                <select name="style[]" class="style-select" onchange="updateCategories(this)">
+                    {% for style in styles %}
+                    <option value="{{ style }}">{{ style }}</option>
+                    {% endfor %}
+                </select>
+                <select name="category[]" class="category-select">
+                    <!-- 由 JavaScript 动态填充 -->
+                </select>
+                <input type="number" name="value[]" class="small-input" placeholder="数量" min="1" max="50" required>
+                <button type="button" class="btn-remove" onclick="removeRow(this)" title="删除此行">✕</button>
+            </div>
+        </div>
+
+        <button type="button" class="btn-add" onclick="addRow()">＋ 添加一行</button>
+
+        <!-- 文件上传 -->
+        <div class="file-section">
+            <label for="excelFile">📂 选择 Excel 模板文件</label>
+            <input type="file" id="excelFile" name="excel_file" accept=".xlsx" required>
+        </div>
+
+        <button type="submit" class="btn-submit" id="submitBtn">🚀 开始处理并下载</button>
+    </form>
+
+    <div class="tip">
+        💡 数量限制 1-50 &nbsp;·&nbsp; 可添加多行 &nbsp;·&nbsp; 自动匹配到对应地点和日期的列
+        <br>
+        <button class="clear-memory" onclick="clearMemory()">🧹 清除记忆（重置默认值）</button>
+    </div>
+</div>
+
+<script>
+    const CATEGORIES = {{ categories|tojson }};
+
+    // ====== localStorage 记忆功能 ======
+    function saveLastRowValues(location, month, day, style) {
+        localStorage.setItem('last_location', location);
+        localStorage.setItem('last_month', month);
+        localStorage.setItem('last_day', day);
+        localStorage.setItem('last_style', style);
+    }
+
+    function getLastRowValues() {
+        return {
+            location: localStorage.getItem('last_location') || '',
+            month: localStorage.getItem('last_month') || '',
+            day: localStorage.getItem('last_day') || '',
+            style: localStorage.getItem('last_style') || ''
+        };
+    }
+
+    function clearMemory() {
+        localStorage.removeItem('last_location');
+        localStorage.removeItem('last_month');
+        localStorage.removeItem('last_day');
+        localStorage.removeItem('last_style');
+        // 刷新第一行
+        const firstRow = document.querySelector('.row-group');
+        if (firstRow) {
+            const selectors = {
+                location: firstRow.querySelector('.location-select'),
+                month: firstRow.querySelector('.month-select'),
+                day: firstRow.querySelector('.day-select'),
+                style: firstRow.querySelector('.style-select')
+            };
+            if (selectors.location) selectors.location.selectedIndex = 0;
+            if (selectors.month) selectors.month.selectedIndex = 0;
+            if (selectors.day) selectors.day.selectedIndex = 0;
+            if (selectors.style) {
+                selectors.style.selectedIndex = 0;
+                updateCategories(selectors.style);
+            }
+        }
+        alert('✅ 记忆已清除');
+    }
+
+    // ====== 应用记忆到某一行 ======
+    function applyMemoryToRow(row) {
+        const last = getLastRowValues();
+        if (last.location) {
+            const locSelect = row.querySelector('.location-select');
+            if (locSelect) locSelect.value = last.location;
+        }
+        if (last.month) {
+            const monthSelect = row.querySelector('.month-select');
+            if (monthSelect) monthSelect.value = last.month;
+        }
+        if (last.day) {
+            const daySelect = row.querySelector('.day-select');
+            if (daySelect) daySelect.value = last.day;
+        }
+        if (last.style) {
+            const styleSelect = row.querySelector('.style-select');
+            if (styleSelect) {
+                styleSelect.value = last.style;
+                updateCategories(styleSelect);
+            }
+        }
+    }
+
+    // ====== 更新品类下拉 ======
+    function updateCategories(selectEl) {
+        const row = selectEl.closest('.row-group');
+        const styleKey = selectEl.value;
+        const categorySelect = row.querySelector('.category-select');
+        const categories = CATEGORIES[styleKey] || [];
+        categorySelect.innerHTML = '';
+        categories.forEach(function(cat) {
+            const opt = document.createElement('option');
+            opt.value = cat;
+            opt.textContent = cat;
+            categorySelect.appendChild(opt);
+        });
+        // 更新记忆（当风格改变时）
+        saveCurrentRowMemory(row);
+    }
+
+    // ====== 保存当前行的记忆 ======
+    function saveCurrentRowMemory(row) {
+        const location = row.querySelector('.location-select');
+        const month = row.querySelector('.month-select');
+        const day = row.querySelector('.day-select');
+        const style = row.querySelector('.style-select');
+        if (location && month && day && style) {
+            saveLastRowValues(location.value, month.value, day.value, style.value);
+        }
+    }
+
+    // ====== 初始化 ======
+    document.addEventListener('DOMContentLoaded', function() {
+        const firstRow = document.querySelector('.row-group');
+        if (firstRow) {
+            // 应用记忆到第一行
+            applyMemoryToRow(firstRow);
+            // 确保品类下拉正确
+            const styleSelect = firstRow.querySelector('.style-select');
+            if (styleSelect) updateCategories(styleSelect);
+        }
+        resetSubmitButton();
+    });
+
+    // ====== 当行内的选择发生变化时，更新记忆 ======
+    document.addEventListener('change', function(e) {
+        const target = e.target;
+        if (target.matches('.location-select, .month-select, .day-select, .style-select')) {
+            const row = target.closest('.row-group');
+            if (row) {
+                saveCurrentRowMemory(row);
+            }
+        }
+    });
+
+    function resetSubmitButton() {
+        const btn = document.getElementById('submitBtn');
+        btn.textContent = '🚀 开始处理并下载';
+        btn.disabled = false;
+    }
+
+    function addRow() {
+        const container = document.getElementById('rowsContainer');
+        const firstRow = container.querySelector('.row-group');
+        const newRow = firstRow.cloneNode(true);
+        
+        // 清空数量输入
+        newRow.querySelector('input[type="number"]').value = '';
+        
+        // 应用记忆到新行（继承上一行的选择）
+        const last = getLastRowValues();
+        if (last.location) {
+            const locSelect = newRow.querySelector('.location-select');
+            if (locSelect) locSelect.value = last.location;
+        }
+        if (last.month) {
+            const monthSelect = newRow.querySelector('.month-select');
+            if (monthSelect) monthSelect.value = last.month;
+        }
+        if (last.day) {
+            const daySelect = newRow.querySelector('.day-select');
+            if (daySelect) daySelect.value = last.day;
+        }
+        if (last.style) {
+            const styleSelect = newRow.querySelector('.style-select');
+            if (styleSelect) {
+                styleSelect.value = last.style;
+                updateCategories(styleSelect);
+            }
+        }
+        
+        // 更新删除按钮
+        const removeBtn = newRow.querySelector('.btn-remove');
+        removeBtn.onclick = function() { removeRow(this); };
+        
+        // 更新 style select 的事件（保留 onchange 属性）
+        const styleSelect = newRow.querySelector('.style-select');
+        styleSelect.onchange = function() { 
+            updateCategories(this); 
+            saveCurrentRowMemory(this.closest('.row-group'));
+        };
+        
+        // 确保品类下拉正确
+        updateCategories(styleSelect);
+        
+        container.appendChild(newRow);
+    }
+
+    function removeRow(btn) {
+        const row = btn.closest('.row-group');
+        const container = document.getElementById('rowsContainer');
+        if (container.children.length <= 1) {
+            alert('至少保留一行');
+            return;
+        }
+        row.remove();
+    }
+
+    // ====== 使用 fetch 提交表单 ======
+    document.getElementById('mainForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('excelFile');
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('请选择 Excel 模板文件');
+            return;
+        }
+
+        const rows = document.querySelectorAll('.row-group');
+        let hasData = false;
+        rows.forEach(function(row) {
+            const val = row.querySelector('input[type="number"]').value;
+            if (val && parseInt(val) >= 1 && parseInt(val) <= 50) {
+                hasData = true;
+            }
+        });
+
+        if (!hasData) {
+            alert('请至少输入一条有效的数量（1-50）');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.textContent = '⏳ 处理中...';
+        submitBtn.disabled = true;
+
+        const formData = new FormData(this);
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('服务器返回错误：' + response.status);
+            }
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = '更新后的数据.xlsx';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?([^"]+)"?/);
+                if (match) filename = match[1];
+            }
+            return response.blob().then(blob => ({ blob, filename }));
+        })
+        .then(({ blob, filename }) => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            resetSubmitButton();
+            alert('✅ 处理完成！文件已下载');
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ 处理失败：' + error.message);
+            resetSubmitButton();
+        });
+    });
+</script>
+
+</body>
+</html>
